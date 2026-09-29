@@ -8,7 +8,7 @@ const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 // The cookie holds a random token; the database only stores its hash, so a
 // leaked database can't be used to hijack sessions.
-function hashToken(token: string) {
+export function hashToken(token: string) {
   return createHash("sha256").update(token).digest("hex");
 }
 

@@ -38,6 +38,18 @@ export function FormMessage({ message }: { message?: string }) {
   );
 }
 
+export function FormNotice({ notice }: { notice?: string }) {
+  if (!notice) return null;
+  return (
+    <p
+      role="status"
+      className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300"
+    >
+      {notice}
+    </p>
+  );
+}
+
 export function SubmitButton({ pending, children }: { pending: boolean; children: string }) {
   return (
     <button

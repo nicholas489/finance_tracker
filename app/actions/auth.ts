@@ -2,25 +2,10 @@
 
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { DUMMY_HASH, hashPassword, verifyPassword } from "@/lib/password";
+import { EMAIL_RE, field, type FormState } from "@/lib/form";
+import { DUMMY_HASH, hashPassword, passwordRuleErrors, verifyPassword } from "@/lib/password";
 import { clearFailures, isLockedOut, recordFailure } from "@/lib/rate-limit";
 import { createSession, deleteSession } from "@/lib/session";
-
-export type FormState =
-  | {
-      errors?: { name?: string[]; email?: string[]; password?: string[] };
-      message?: string;
-      // Echoed back so the form keeps what the user typed after an error.
-      values?: { name?: string; email?: string };
-    }
-  | undefined;
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-function field(formData: FormData, key: string) {
-  const value = formData.get(key);
-  return typeof value === "string" ? value : "";
-}
 
 export async function login(_state: FormState, formData: FormData): Promise<FormState> {
   const email = field(formData, "email").trim().toLowerCase();
@@ -61,10 +46,7 @@ export async function signup(_state: FormState, formData: FormData): Promise<For
   const errors: NonNullable<FormState>["errors"] = {};
   if (name.length < 2) errors.name = ["Name must be at least 2 characters."];
   if (!EMAIL_RE.test(email)) errors.email = ["Enter a valid email address."];
-  const passwordErrors = [];
-  if (password.length < 8) passwordErrors.push("Be at least 8 characters long.");
-  if (!/[a-zA-Z]/.test(password)) passwordErrors.push("Contain at least one letter.");
-  if (!/[0-9]/.test(password)) passwordErrors.push("Contain at least one number.");
+  const passwordErrors = passwordRuleErrors(password);
   if (passwordErrors.length) errors.password = passwordErrors;
   if (errors.name || errors.email || errors.password) return { errors, values: { name, email } };
 

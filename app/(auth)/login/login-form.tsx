@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState } from "react";
 import { login } from "@/app/actions/auth";
 import { Field, FormMessage, SubmitButton } from "../form-ui";
@@ -29,6 +30,12 @@ export function LoginForm() {
         required
         errors={state?.errors?.password}
       />
+      <Link
+        href="/forgot-password"
+        className="-mt-2 self-end text-xs text-zinc-600 underline-offset-4 hover:underline dark:text-zinc-400"
+      >
+        Forgot password?
+      </Link>
       <SubmitButton pending={pending}>Log in</SubmitButton>
     </form>
   );

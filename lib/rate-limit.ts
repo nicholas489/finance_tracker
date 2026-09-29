@@ -3,7 +3,7 @@ import "server-only";
 const MAX_ATTEMPTS = 5;
 const WINDOW_MS = 15 * 60 * 1000;
 
-// In-memory, per-process failed-login counter. Good enough for a single
+// In-memory, per-process attempt counter (failed logins, reset requests). Good enough for a single
 // server; swap for a shared store (e.g. Redis) if the app is scaled out.
 const failures = new Map<string, { count: number; resetAt: number }>();
 

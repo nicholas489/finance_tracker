@@ -27,6 +27,12 @@ function open() {
       expires_at INTEGER NOT NULL      -- unix ms
     );
     CREATE INDEX IF NOT EXISTS sessions_user_id ON sessions(user_id);
+
+    CREATE TABLE IF NOT EXISTS password_resets (
+      id         TEXT    PRIMARY KEY, -- sha256 of the token in the emailed link
+      user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      expires_at INTEGER NOT NULL      -- unix ms
+    );
   `);
   return db;
 }
