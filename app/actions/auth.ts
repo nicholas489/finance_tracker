@@ -1,7 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { db } from "@/lib/db";
+import { sql } from "@/lib/db";
 import { DUMMY_HASH, hashPassword, verifyPassword } from "@/lib/password";
 import { clearFailures, isLockedOut, recordFailure } from "@/lib/rate-limit";
 import { createSession, deleteSession } from "@/lib/session";
@@ -38,9 +38,9 @@ export async function login(_state: FormState, formData: FormData): Promise<Form
     };
   }
 
-  const user = db
-    .prepare("SELECT id, password_hash FROM users WHERE email = ?")
-    .get(email) as { id: number; password_hash: string } | undefined;
+  const [user] = await sql<{ id: number; password_hash: string }[]>`
+    SELECT id, password_hash FROM users WHERE email = ${email}
+  `;
 
   const valid = await verifyPassword(password, user?.password_hash ?? DUMMY_HASH);
   if (!user || !valid) {
@@ -68,7 +68,7 @@ export async function signup(_state: FormState, formData: FormData): Promise<For
   if (passwordErrors.length) errors.password = passwordErrors;
   if (errors.name || errors.email || errors.password) return { errors, values: { name, email } };
 
-  const existing = db.prepare("SELECT 1 FROM users WHERE email = ?").get(email);
+  const [existing] = await sql`SELECT 1 FROM users WHERE email = ${email}`;
   if (existing) {
     return {
       errors: { email: ["An account with this email already exists."] },
@@ -77,11 +77,13 @@ export async function signup(_state: FormState, formData: FormData): Promise<For
   }
 
   const passwordHash = await hashPassword(password);
-  const { lastInsertRowid } = db
-    .prepare("INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)")
-    .run(name, email, passwordHash);
+  const [user] = await sql<{ id: number }[]>`
+    INSERT INTO users (name, email, password_hash)
+    VALUES (${name}, ${email}, ${passwordHash})
+    RETURNING id
+  `;
 
-  await createSession(Number(lastInsertRowid));
+  await createSession(user.id);
   redirect("/dashboard");
 }
 
