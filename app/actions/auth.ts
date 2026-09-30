@@ -66,7 +66,7 @@ export async function signup(_state: FormState, formData: FormData): Promise<For
   `;
 
   await createSession(user.id);
-  redirect("/dashboard");
+  redirect("/security-question");
 }
 
 export async function logout() {

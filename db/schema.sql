@@ -8,6 +8,11 @@ CREATE TABLE IF NOT EXISTS users (
   created_at    timestamptz NOT NULL DEFAULT now()
 );
 
+-- Used to reset a forgotten password. Null until the user sets one up after
+-- signing up. The answer is normalized (see lib/security-question.ts) and hashed.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS security_question    text;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS security_answer_hash text;
+
 CREATE TABLE IF NOT EXISTS sessions (
   id         text        PRIMARY KEY, -- sha256 of the token stored in the cookie
   user_id    integer     NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -16,7 +21,7 @@ CREATE TABLE IF NOT EXISTS sessions (
 CREATE INDEX IF NOT EXISTS sessions_user_id ON sessions(user_id);
 
 CREATE TABLE IF NOT EXISTS password_resets (
-  id         text        PRIMARY KEY, -- sha256 of the token in the emailed link
+  id         text        PRIMARY KEY, -- sha256 of the token in the reset cookie, set once the security answer is verified
   user_id    integer     NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   expires_at timestamptz NOT NULL
 );

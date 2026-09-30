@@ -1,3 +1,28 @@
+// The centered card that wraps every auth screen.
+export function AuthCard({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex flex-1 items-center justify-center bg-zinc-50 px-4 py-16 font-sans dark:bg-black">
+      <main className="w-full max-w-sm rounded-2xl border border-black/[.08] bg-white p-8 shadow-sm dark:border-white/[.145] dark:bg-zinc-950">
+        {children}
+      </main>
+    </div>
+  );
+}
+
+const inputClass =
+  "h-10 rounded-lg border border-black/[.12] bg-transparent px-3 text-sm outline-none focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10 aria-invalid:border-red-500 dark:border-white/[.18] dark:focus:border-zinc-100 dark:focus:ring-white/10";
+
+function FieldErrors({ id, errors }: { id?: string; errors?: string[] }) {
+  if (!errors?.length) return null;
+  return (
+    <ul id={id} className="text-xs text-red-600 dark:text-red-400">
+      {errors.map((error) => (
+        <li key={error}>{error}</li>
+      ))}
+    </ul>
+  );
+}
+
 export function Field({
   label,
   errors,
@@ -13,15 +38,42 @@ export function Field({
         {...input}
         aria-invalid={errors?.length ? true : undefined}
         aria-describedby={errorId}
-        className="h-10 rounded-lg border border-black/[.12] bg-transparent px-3 text-sm outline-none focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10 aria-invalid:border-red-500 dark:border-white/[.18] dark:focus:border-zinc-100 dark:focus:ring-white/10"
+        className={inputClass}
       />
-      {errors?.length ? (
-        <ul id={errorId} className="text-xs text-red-600 dark:text-red-400">
-          {errors.map((error) => (
-            <li key={error}>{error}</li>
-          ))}
-        </ul>
-      ) : null}
+      <FieldErrors id={errorId} errors={errors} />
+    </div>
+  );
+}
+
+export function SelectField({
+  label,
+  errors,
+  options,
+  ...select
+}: {
+  label: string;
+  errors?: string[];
+  options: readonly string[];
+} & React.SelectHTMLAttributes<HTMLSelectElement>) {
+  const errorId = errors?.length ? `${select.id}-error` : undefined;
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label htmlFor={select.id} className="text-sm font-medium">
+        {label}
+      </label>
+      <select
+        {...select}
+        aria-invalid={errors?.length ? true : undefined}
+        aria-describedby={errorId}
+        className={`${inputClass} dark:bg-zinc-950`}
+      >
+        {options.map((option) => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
+      </select>
+      <FieldErrors id={errorId} errors={errors} />
     </div>
   );
 }

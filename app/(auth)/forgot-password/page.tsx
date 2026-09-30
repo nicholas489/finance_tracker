@@ -9,7 +9,7 @@ export default function ForgotPasswordPage() {
     <>
       <h1 className="text-2xl font-semibold tracking-tight">Reset your password</h1>
       <p className="mt-1 mb-6 text-sm text-zinc-600 dark:text-zinc-400">
-        Enter your account email and we&apos;ll send you a link to choose a new password.
+        Enter your account email and answer your security question to choose a new password.
       </p>
       <ForgotPasswordForm />
       <p className="mt-6 text-center text-sm text-zinc-600 dark:text-zinc-400">

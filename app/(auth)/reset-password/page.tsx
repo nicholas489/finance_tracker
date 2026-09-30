@@ -1,30 +1,28 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { isResetTokenValid } from "@/lib/password-reset";
+import { cookies } from "next/headers";
+import { isResetTokenValid, RESET_COOKIE } from "@/lib/password-reset";
 import { ResetPasswordForm } from "./reset-password-form";
 
-export const metadata: Metadata = {
-  title: "Choose a new password · Finance Tracker",
-  // Keep the token in this page's URL from leaking to other sites via Referer.
-  referrer: "no-referrer",
-};
+export const metadata: Metadata = { title: "Choose a new password · Finance Tracker" };
 
-export default async function ResetPasswordPage({ searchParams }: PageProps<"/reset-password">) {
-  const { token } = await searchParams;
+export default async function ResetPasswordPage() {
+  // Set by the forgot password form once the security answer is verified.
+  const token = (await cookies()).get(RESET_COOKIE)?.value;
 
-  if (typeof token !== "string" || !isResetTokenValid(token)) {
+  if (!token || !(await isResetTokenValid(token))) {
     return (
       <>
-        <h1 className="text-2xl font-semibold tracking-tight">Link expired</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Session expired</h1>
         <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-          This password reset link is invalid or has expired. Reset links work once and last 30
-          minutes.
+          To choose a new password, answer your security question first. After you answer it, you
+          have 10 minutes to set your new password.
         </p>
         <Link
           href="/forgot-password"
           className="mt-6 flex h-10 items-center justify-center rounded-lg bg-foreground text-sm font-medium text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc]"
         >
-          Request a new link
+          Start over
         </Link>
       </>
     );
@@ -36,7 +34,7 @@ export default async function ResetPasswordPage({ searchParams }: PageProps<"/re
       <p className="mt-1 mb-6 text-sm text-zinc-600 dark:text-zinc-400">
         You&apos;ll be signed out on all devices once it&apos;s changed.
       </p>
-      <ResetPasswordForm token={token} />
+      <ResetPasswordForm />
     </>
   );
 }

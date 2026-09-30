@@ -31,11 +31,19 @@ export async function createSession(userId: number) {
   });
 }
 
-export type SessionUser = { id: number; name: string; email: string };
+export type SessionUser = {
+  id: number;
+  name: string;
+  email: string;
+  hasSecurityQuestion: boolean;
+};
 
 export async function getSessionUser(token: string): Promise<SessionUser | null> {
-  const [row] = await sql<(SessionUser & { expires_at: Date })[]>`
-    SELECT u.id, u.name, u.email, s.expires_at
+  const [row] = await sql<
+    { id: number; name: string; email: string; has_security_question: boolean; expires_at: Date }[]
+  >`
+    SELECT u.id, u.name, u.email, u.security_answer_hash IS NOT NULL AS has_security_question,
+           s.expires_at
       FROM sessions s JOIN users u ON u.id = s.user_id
      WHERE s.id = ${hashToken(token)}
   `;
@@ -45,7 +53,12 @@ export async function getSessionUser(token: string): Promise<SessionUser | null>
     await sql`DELETE FROM sessions WHERE id = ${hashToken(token)}`;
     return null;
   }
-  return { id: row.id, name: row.name, email: row.email };
+  return {
+    id: row.id,
+    name: row.name,
+    email: row.email,
+    hasSecurityQuestion: row.has_security_question,
+  };
 }
 
 export async function deleteSession() {

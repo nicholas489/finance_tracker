@@ -11,8 +11,11 @@ export const getCurrentUser = cache(async () => {
 });
 
 // Use in pages, actions and data fetches that require a signed-in user.
+// Users who haven't set up a security question are sent to do that first,
+// since it's the only way they can reset a forgotten password.
 export async function requireUser() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+  if (!user.hasSecurityQuestion) redirect("/security-question");
   return user;
 }
