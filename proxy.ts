@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 // Routes that need a signed-in user. Add new private sections here.
-const protectedPrefixes = ["/dashboard"];
+const protectedPrefixes = ["/dashboard", "/security-question"];
 
 // Optimistic check only: it looks for the cookie, not a valid session.
 // The real check against the database happens in lib/dal.ts.

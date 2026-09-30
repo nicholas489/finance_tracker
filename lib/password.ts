@@ -29,3 +29,12 @@ export async function verifyPassword(password: string, stored: string): Promise<
 // wrong password and response times don't reveal which emails are registered.
 export const DUMMY_HASH =
   "scrypt$00000000000000000000000000000000$" + "0".repeat(KEY_LENGTH * 2);
+
+// Shared by sign-up and password reset.
+export function passwordRuleErrors(password: string): string[] {
+  const errors = [];
+  if (password.length < 8) errors.push("Be at least 8 characters long.");
+  if (!/[a-zA-Z]/.test(password)) errors.push("Contain at least one letter.");
+  if (!/[0-9]/.test(password)) errors.push("Contain at least one number.");
+  return errors;
+}
