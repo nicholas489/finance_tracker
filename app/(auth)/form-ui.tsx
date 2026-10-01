@@ -9,7 +9,7 @@ export function AuthCard({ children }: { children: React.ReactNode }) {
   );
 }
 
-const inputClass =
+export const inputClass =
   "h-10 rounded-lg border border-black/[.12] bg-transparent px-3 text-sm outline-none focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10 aria-invalid:border-red-500 dark:border-white/[.18] dark:focus:border-zinc-100 dark:focus:ring-white/10";
 
 function FieldErrors({ id, errors }: { id?: string; errors?: string[] }) {
@@ -49,11 +49,14 @@ export function SelectField({
   label,
   errors,
   options,
+  placeholder,
   ...select
 }: {
   label: string;
   errors?: string[];
   options: readonly string[];
+  // Shown first with an empty value, so nothing is picked by accident.
+  placeholder?: string;
 } & React.SelectHTMLAttributes<HTMLSelectElement>) {
   const errorId = errors?.length ? `${select.id}-error` : undefined;
   return (
@@ -67,12 +70,39 @@ export function SelectField({
         aria-describedby={errorId}
         className={`${inputClass} dark:bg-zinc-950`}
       >
+        {placeholder && (
+          <option value="" disabled>
+            {placeholder}
+          </option>
+        )}
         {options.map((option) => (
           <option key={option} value={option}>
             {option}
           </option>
         ))}
       </select>
+      <FieldErrors id={errorId} errors={errors} />
+    </div>
+  );
+}
+
+export function TextAreaField({
+  label,
+  errors,
+  ...textarea
+}: { label: string; errors?: string[] } & React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  const errorId = errors?.length ? `${textarea.id}-error` : undefined;
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label htmlFor={textarea.id} className="text-sm font-medium">
+        {label}
+      </label>
+      <textarea
+        {...textarea}
+        aria-invalid={errors?.length ? true : undefined}
+        aria-describedby={errorId}
+        className={`${inputClass} h-auto py-2`}
+      />
       <FieldErrors id={errorId} errors={errors} />
     </div>
   );
