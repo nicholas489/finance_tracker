@@ -9,7 +9,6 @@ import {
   SubmitButton,
   TextAreaField,
 } from "@/app/(auth)/form-ui";
-import { EXPENSE_CATEGORIES } from "@/lib/categories";
 import type {
   TransactionFormState,
   TransactionType,
@@ -23,10 +22,12 @@ const typeOptions: { value: TransactionType; label: string }[] = [
 
 export function TransactionForm({
   action,
+  categories,
   initial,
   submitLabel,
 }: {
   action: (state: TransactionFormState, formData: FormData) => Promise<TransactionFormState>;
+  categories: string[];
   initial: TransactionValues;
   submitLabel: string;
 }) {
@@ -109,7 +110,7 @@ export function TransactionForm({
           name="category"
           label="Category"
           placeholder="Choose a category"
-          options={EXPENSE_CATEGORIES}
+          options={categories}
           defaultValue={initial.category}
           errors={errors?.category}
         />

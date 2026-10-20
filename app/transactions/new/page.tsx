@@ -1,11 +1,15 @@
 import type { Metadata } from "next";
 import { saveTransaction } from "@/app/actions/transactions";
+import { requireUser } from "@/lib/dal";
 import { today } from "@/lib/format";
+import { listExpenseCategories } from "@/lib/user-categories";
 import { TransactionForm } from "../transaction-form";
 
 export const metadata: Metadata = { title: "Add transaction · Finance Tracker" };
 
 export default async function NewTransactionPage(props: PageProps<"/transactions/new">) {
+  const user = await requireUser();
+  const categories = await listExpenseCategories(user.id);
   // ?type=income opens the form on Income; anything else starts on Expense.
   const type = (await props.searchParams).type === "income" ? "income" : "expense";
 
@@ -14,6 +18,7 @@ export default async function NewTransactionPage(props: PageProps<"/transactions
       <h1 className="mb-6 text-2xl font-semibold tracking-tight">Add transaction</h1>
       <TransactionForm
         action={saveTransaction.bind(null, null)}
+        categories={categories}
         initial={{ type, name: "", amount: "", date: today(), category: "", description: "" }}
         submitLabel="Add transaction"
       />

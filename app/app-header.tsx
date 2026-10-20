@@ -15,6 +15,12 @@ export function AppHeader({ email }: { email: string }) {
         >
           Transactions
         </Link>
+        <Link
+          href="/categories"
+          className="text-sm text-zinc-600 hover:text-foreground dark:text-zinc-400"
+        >
+          Categories
+        </Link>
       </nav>
       <div className="flex items-center gap-4">
         <span className="hidden text-sm text-zinc-600 sm:inline dark:text-zinc-400">{email}</span>

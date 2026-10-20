@@ -1,4 +1,3 @@
-import { isExpenseCategory } from "@/lib/categories";
 import { field } from "@/lib/form";
 
 export type TransactionType = "income" | "expense";
@@ -44,8 +43,10 @@ const DESCRIPTION_MAX = 500;
 // The largest value numeric(12,2) holds.
 const AMOUNT_MAX = 9_999_999_999.99;
 
+// categories is everything the user can file an expense under.
 export function parseTransactionForm(
   formData: FormData,
+  categories: readonly string[],
 ): { input: TransactionInput } | { state: TransactionFormState } {
   const values: TransactionValues = {
     type: field(formData, "type"),
@@ -75,7 +76,7 @@ export function parseTransactionForm(
   if (!isValidDate(values.date)) errors.date = ["Enter a valid date."];
 
   const isExpense = values.type === "expense";
-  if (isExpense && !isExpenseCategory(values.category)) errors.category = ["Choose a category."];
+  if (isExpense && !categories.includes(values.category)) errors.category = ["Choose a category."];
 
   if (values.description.length > DESCRIPTION_MAX) {
     errors.description = [`Description must be ${DESCRIPTION_MAX} characters or fewer.`];
