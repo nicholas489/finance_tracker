@@ -71,7 +71,7 @@ export function CustomCategoryRow({ id, name }: { id: number; name: string }) {
           <DeleteButton
             action={removeCategory.bind(null, id)}
             name={name}
-            warning={`Any expenses in it will move to "${FALLBACK_CATEGORY}". `}
+            warning={`Any expenses in it will move to "${FALLBACK_CATEGORY}" and its budget, if any, will be removed. `}
           />
         </div>
       </li>

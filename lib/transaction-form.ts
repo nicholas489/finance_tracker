@@ -43,6 +43,17 @@ const DESCRIPTION_MAX = 500;
 // The largest value numeric(12,2) holds.
 const AMOUNT_MAX = 9_999_999_999.99;
 
+// A positive money amount, returned as a decimal string like "1200.50".
+// Allows "$1,200.50" as well as "1200.50".
+export function parseAmount(raw: string): { amount: string } | { error: string } {
+  const amount = raw.trim().replace(/^\$/, "").replaceAll(",", "");
+  if (!/^\d+(\.\d{1,2})?$/.test(amount) || Number(amount) <= 0) {
+    return { error: "Enter an amount greater than 0, like 12.50." };
+  }
+  if (Number(amount) > AMOUNT_MAX) return { error: "That amount is too large." };
+  return { amount };
+}
+
 // categories is everything the user can file an expense under.
 export function parseTransactionForm(
   formData: FormData,
@@ -65,13 +76,8 @@ export function parseTransactionForm(
   if (!values.name) errors.name = ["Enter a name."];
   else if (values.name.length > NAME_MAX) errors.name = [`Name must be ${NAME_MAX} characters or fewer.`];
 
-  // Allow "$1,200.50" as well as "1200.50".
-  const amount = values.amount.replace(/^\$/, "").replaceAll(",", "");
-  if (!/^\d+(\.\d{1,2})?$/.test(amount) || Number(amount) <= 0) {
-    errors.amount = ["Enter an amount greater than 0, like 12.50."];
-  } else if (Number(amount) > AMOUNT_MAX) {
-    errors.amount = ["That amount is too large."];
-  }
+  const amount = parseAmount(values.amount);
+  if ("error" in amount) errors.amount = [amount.error];
 
   if (!isValidDate(values.date)) errors.date = ["Enter a valid date."];
 
@@ -82,13 +88,13 @@ export function parseTransactionForm(
     errors.description = [`Description must be ${DESCRIPTION_MAX} characters or fewer.`];
   }
 
-  if (Object.keys(errors).length) return { state: { errors, values } };
+  if (Object.keys(errors).length || "error" in amount) return { state: { errors, values } };
 
   return {
     input: {
       type: values.type,
       name: values.name,
-      amount,
+      amount: amount.amount,
       date: values.date,
       category: isExpense ? values.category : null,
       description: values.description || null,

@@ -26,3 +26,15 @@ export function formatDate(date: string) {
 export function today() {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Toronto" }).format(new Date());
 }
+
+const longMonth = new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "long", timeZone: "UTC" });
+
+// "2026-10" -> "October 2026".
+export function formatMonth(month: string) {
+  return longMonth.format(new Date(`${month}-01T00:00:00Z`));
+}
+
+// This month as "YYYY-MM", in the users' time zone like today().
+export function currentMonth() {
+  return today().slice(0, 7);
+}
