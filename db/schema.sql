@@ -26,8 +26,9 @@ CREATE TABLE IF NOT EXISTS password_resets (
   expires_at timestamptz NOT NULL
 );
 
--- Income and expenses. Expenses must have a category (the allowed values are in
--- lib/categories.ts); income never has one.
+-- Income and expenses. Expenses must have a category, stored by name: one of
+-- the defaults in lib/categories.ts or one of the user's own (below). Income
+-- never has one.
 CREATE TABLE IF NOT EXISTS transactions (
   id          integer       GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   user_id     integer       NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -42,6 +43,17 @@ CREATE TABLE IF NOT EXISTS transactions (
 );
 CREATE INDEX IF NOT EXISTS transactions_user_id_date ON transactions(user_id, date DESC);
 
+-- Expense categories a user adds on top of the defaults. Renaming or deleting
+-- one also updates that user's transactions (see lib/user-categories.ts).
+CREATE TABLE IF NOT EXISTS categories (
+  id         integer     GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  user_id    integer     NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name       text        NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+-- Names are unique per user, ignoring case.
+CREATE UNIQUE INDEX IF NOT EXISTS categories_user_id_name ON categories(user_id, lower(name));
+
 -- Supabase exposes the public schema through its REST API to anyone holding the
 -- publishable key. RLS with no policies blocks that route entirely; the app
 -- connects as the table owner, which RLS doesn't apply to.
@@ -49,3 +61,4 @@ ALTER TABLE users           ENABLE ROW LEVEL SECURITY;
 ALTER TABLE sessions        ENABLE ROW LEVEL SECURITY;
 ALTER TABLE password_resets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE transactions    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE categories      ENABLE ROW LEVEL SECURITY;

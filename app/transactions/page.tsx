@@ -3,11 +3,11 @@ import Form from "next/form";
 import Link from "next/link";
 import { removeTransaction } from "@/app/actions/transactions";
 import { inputClass } from "@/app/(auth)/form-ui";
-import { EXPENSE_CATEGORIES, isExpenseCategory } from "@/lib/categories";
 import { requireUser } from "@/lib/dal";
 import { formatDate, formatMoney, toCents } from "@/lib/format";
 import { isTransactionType, isValidDate } from "@/lib/transaction-form";
 import { listTransactions, type TransactionFilters } from "@/lib/transactions";
+import { listExpenseCategories } from "@/lib/user-categories";
 import { DeleteButton } from "./delete-button";
 
 export const metadata: Metadata = { title: "Transactions · Finance Tracker" };
@@ -18,7 +18,10 @@ const primaryButtonClass = `${buttonClass} bg-foreground text-background hover:b
 const secondaryButtonClass = `${buttonClass} border border-black/[.12] hover:bg-black/[.04] dark:border-white/[.18] dark:hover:bg-white/[.06]`;
 
 // The URL can hold anything, so invalid filters are ignored rather than trusted.
-function parseFilters(params: Record<string, string | string[] | undefined>): TransactionFilters {
+function parseFilters(
+  params: Record<string, string | string[] | undefined>,
+  categories: readonly string[],
+): TransactionFilters {
   const get = (key: string) => {
     const value = params[key];
     return typeof value === "string" ? value : "";
@@ -29,7 +32,7 @@ function parseFilters(params: Record<string, string | string[] | undefined>): Tr
   const to = get("to");
   return {
     type: isTransactionType(type) ? type : undefined,
-    category: isExpenseCategory(category) ? category : undefined,
+    category: categories.includes(category) ? category : undefined,
     from: isValidDate(from) ? from : undefined,
     to: isValidDate(to) ? to : undefined,
   };
@@ -37,7 +40,8 @@ function parseFilters(params: Record<string, string | string[] | undefined>): Tr
 
 export default async function TransactionsPage(props: PageProps<"/transactions">) {
   const user = await requireUser();
-  const filters = parseFilters(await props.searchParams);
+  const categories = await listExpenseCategories(user.id);
+  const filters = parseFilters(await props.searchParams, categories);
   const transactions = await listTransactions(user.id, filters);
   const isFiltered = Object.values(filters).some(Boolean);
 
@@ -94,7 +98,7 @@ export default async function TransactionsPage(props: PageProps<"/transactions">
             className={`${inputClass} dark:bg-zinc-950`}
           >
             <option value="">All</option>
-            {EXPENSE_CATEGORIES.map((category) => (
+            {categories.map((category) => (
               <option key={category} value={category}>
                 {category}
               </option>

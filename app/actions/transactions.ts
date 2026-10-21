@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/dal";
 import { parseTransactionForm, type TransactionFormState } from "@/lib/transaction-form";
 import { createTransaction, deleteTransaction, updateTransaction } from "@/lib/transactions";
+import { listExpenseCategories } from "@/lib/user-categories";
 
 // Creates a transaction when id is null, otherwise edits that one. The page
 // binds the id, so the form itself never sends it.
@@ -15,7 +16,7 @@ export async function saveTransaction(
 ): Promise<TransactionFormState> {
   const user = await requireUser();
 
-  const result = parseTransactionForm(formData);
+  const result = parseTransactionForm(formData, await listExpenseCategories(user.id));
   if ("state" in result) return result.state;
 
   if (id === null) {

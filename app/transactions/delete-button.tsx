@@ -2,12 +2,21 @@
 
 import { useFormStatus } from "react-dom";
 
-export function DeleteButton({ action, name }: { action: () => Promise<void>; name: string }) {
+export function DeleteButton({
+  action,
+  name,
+  warning = "",
+}: {
+  action: () => Promise<void>;
+  name: string;
+  // Extra consequences to spell out in the confirmation, ending in a space.
+  warning?: string;
+}) {
   return (
     <form
       action={action}
       onSubmit={(event) => {
-        if (!confirm(`Delete "${name}"? This can't be undone.`)) event.preventDefault();
+        if (!confirm(`Delete "${name}"? ${warning}This can't be undone.`)) event.preventDefault();
       }}
     >
       <Button />
