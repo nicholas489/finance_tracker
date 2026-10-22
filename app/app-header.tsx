@@ -21,6 +21,12 @@ export function AppHeader({ email }: { email: string }) {
         >
           Categories
         </Link>
+        <Link
+          href="/budgets"
+          className="text-sm text-zinc-600 hover:text-foreground dark:text-zinc-400"
+        >
+          Budgets
+        </Link>
       </nav>
       <div className="flex items-center gap-4">
         <span className="hidden text-sm text-zinc-600 sm:inline dark:text-zinc-400">{email}</span>
