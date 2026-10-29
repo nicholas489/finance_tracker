@@ -54,6 +54,17 @@ export function budgetProgress(budget: { amount: string; spent: string }) {
   };
 }
 
+// A budget warns softly once 80% is used, and hard once it's all used.
+export const WARN_AT = 0.8;
+
+export type BudgetAlertLevel = "warning" | "limit";
+
+// used is budgetProgress().used. undefined while under 80%.
+export function budgetAlertLevel(used: number): BudgetAlertLevel | undefined {
+  if (used >= 1) return "limit";
+  if (used >= WARN_AT) return "warning";
+}
+
 // "$280.00 left", or "Over by $20.00" once it's overspent.
 export function formatLeft(leftCents: number) {
   return leftCents < 0 ? `Over by ${formatMoney(-leftCents)}` : `${formatMoney(leftCents)} left`;

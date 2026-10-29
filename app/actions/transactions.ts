@@ -2,6 +2,8 @@
 
 import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
+import { budgetAlertLevel, budgetProgress } from "@/lib/budget-form";
+import { getBudgetStatus } from "@/lib/budgets";
 import { requireUser } from "@/lib/dal";
 import { parseTransactionForm, type TransactionFormState } from "@/lib/transaction-form";
 import { createTransaction, deleteTransaction, updateTransaction } from "@/lib/transactions";
@@ -23,6 +25,17 @@ export async function saveTransaction(
     await createTransaction(user.id, result.input);
   } else if (!(await updateTransaction(user.id, id, result.input))) {
     return { message: "This transaction no longer exists. It may have been deleted." };
+  }
+
+  // If the expense leaves its budget at 80% or more for that month, the list
+  // shows an alert for it.
+  const { category, date } = result.input;
+  if (category) {
+    const month = date.slice(0, 7);
+    const budget = await getBudgetStatus(user.id, month, category);
+    if (budget && budgetAlertLevel(budgetProgress(budget).used)) {
+      redirect(`/transactions?${new URLSearchParams({ budget: category, month })}`);
+    }
   }
   redirect("/transactions");
 }
