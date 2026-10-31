@@ -7,6 +7,7 @@ import { inputClass } from "@/app/(auth)/form-ui";
 import { DeleteButton } from "@/app/transactions/delete-button";
 import { budgetProgress, formatLeft } from "@/lib/budget-form";
 import { formatMoney } from "@/lib/format";
+import { BudgetBadge } from "./budget-alerts";
 import { BudgetBar } from "./budget-bar";
 
 const buttonClass =
@@ -99,9 +100,12 @@ export function BudgetRow({
     <li className="px-4 py-3 sm:px-5">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <Link href={transactionsHref} className="block truncate font-medium underline-offset-4 hover:underline">
-            {category}
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link href={transactionsHref} className="truncate font-medium underline-offset-4 hover:underline">
+              {category}
+            </Link>
+            <BudgetBadge used={used} leftCents={leftCents} />
+          </div>
           <p className="mt-0.5 text-xs text-zinc-600 tabular-nums dark:text-zinc-400">
             {formatMoney(spentCents)} spent of {formatMoney(budgetCents)}
           </p>
@@ -129,7 +133,7 @@ export function BudgetRow({
         </div>
       </div>
       <div className="mt-3">
-        <BudgetBar used={used} over={over} />
+        <BudgetBar used={used} />
       </div>
       {editing && (
         <form

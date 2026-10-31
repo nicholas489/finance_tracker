@@ -3,7 +3,10 @@ import Form from "next/form";
 import Link from "next/link";
 import { removeTransaction } from "@/app/actions/transactions";
 import { inputClass } from "@/app/(auth)/form-ui";
+import { BudgetAlert } from "@/app/budgets/budget-alerts";
 import { Total } from "@/app/total";
+import { parseMonth } from "@/lib/budget-form";
+import { getBudgetStatus } from "@/lib/budgets";
 import { requireUser } from "@/lib/dal";
 import { formatDate, formatMoney, toCents } from "@/lib/format";
 import { isTransactionType, isValidDate } from "@/lib/transaction-form";
@@ -42,8 +45,16 @@ function parseFilters(
 export default async function TransactionsPage(props: PageProps<"/transactions">) {
   const user = await requireUser();
   const categories = await listExpenseCategories(user.id);
-  const filters = parseFilters(await props.searchParams, categories);
+  const params = await props.searchParams;
+  const filters = parseFilters(params, categories);
   const transactions = await listTransactions(user.id, filters);
+  // Set after saving an expense that left its budget at 80% or more. The
+  // alert is worked out from the budget itself, never from the URL.
+  const alertMonth = typeof params.month === "string" ? parseMonth(params.month) : undefined;
+  const alertBudget =
+    alertMonth && typeof params.budget === "string" && categories.includes(params.budget)
+      ? await getBudgetStatus(user.id, alertMonth, params.budget)
+      : null;
   const isFiltered = Object.values(filters).some(Boolean);
 
   let incomeCents = 0;
@@ -66,6 +77,12 @@ export default async function TransactionsPage(props: PageProps<"/transactions">
           </Link>
         </div>
       </div>
+
+      {alertBudget && alertMonth && (
+        <div className="mt-6 empty:hidden">
+          <BudgetAlert budget={alertBudget} month={alertMonth} />
+        </div>
+      )}
 
       <Form
         action="/transactions"

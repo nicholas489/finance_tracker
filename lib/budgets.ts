@@ -6,7 +6,7 @@ import { sql } from "@/lib/db";
 export type BudgetStatus = { id: number; category: string; amount: string; spent: string };
 
 // Every query is scoped to the user, like transactions. month is "YYYY-MM".
-export async function listBudgetStatus(userId: number, month: string) {
+function budgetStatus(userId: number, month: string, category?: string) {
   const start = `${month}-01`;
   return sql<BudgetStatus[]>`
     SELECT b.id, b.category, b.amount::text AS amount, COALESCE(s.spent, 0)::text AS spent
@@ -18,8 +18,19 @@ export async function listBudgetStatus(userId: number, month: string) {
          GROUP BY category
       ) s ON s.category = b.category
      WHERE b.user_id = ${userId}
+       ${category ? sql`AND b.category = ${category}` : sql``}
      ORDER BY lower(b.category)
   `;
+}
+
+export function listBudgetStatus(userId: number, month: string) {
+  return budgetStatus(userId, month);
+}
+
+// One category's budget for the month, or null if it doesn't have one.
+export async function getBudgetStatus(userId: number, month: string, category: string) {
+  const [row] = await budgetStatus(userId, month, category);
+  return row ?? null;
 }
 
 // Adds a budget for the category, or replaces its amount if it already has one.
