@@ -13,6 +13,7 @@ import { isTransactionType, isValidDate } from "@/lib/transaction-form";
 import { listTransactions, type TransactionFilters } from "@/lib/transactions";
 import { listExpenseCategories } from "@/lib/user-categories";
 import { DeleteButton } from "./delete-button";
+import { SpendingChart } from "./spending-chart";
 
 export const metadata: Metadata = { title: "Transactions · Finance Tracker" };
 
@@ -59,9 +60,16 @@ export default async function TransactionsPage(props: PageProps<"/transactions">
 
   let incomeCents = 0;
   let expenseCents = 0;
+  // Expenses per category, so the chart follows the filters like the totals do.
+  const categoryCents = new Map<string, number>();
   for (const t of transactions) {
-    if (t.type === "income") incomeCents += toCents(t.amount);
-    else expenseCents += toCents(t.amount);
+    if (t.type === "income") {
+      incomeCents += toCents(t.amount);
+    } else {
+      expenseCents += toCents(t.amount);
+      const category = t.category ?? "";
+      categoryCents.set(category, (categoryCents.get(category) ?? 0) + toCents(t.amount));
+    }
   }
 
   return (
@@ -140,6 +148,12 @@ export default async function TransactionsPage(props: PageProps<"/transactions">
         <Total label="Expenses" cents={expenseCents} />
         <Total label="Net" cents={incomeCents - expenseCents} />
       </dl>
+
+      {expenseCents > 0 && (
+        <SpendingChart
+          spending={Array.from(categoryCents, ([category, cents]) => ({ category, cents }))}
+        />
+      )}
 
       {transactions.length === 0 ? (
         <p className="mt-6 rounded-2xl border border-dashed border-black/[.12] px-6 py-12 text-center text-sm text-zinc-600 dark:border-white/[.18] dark:text-zinc-400">
