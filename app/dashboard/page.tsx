@@ -3,21 +3,26 @@ import Link from "next/link";
 import { AppHeader } from "@/app/app-header";
 import { BudgetAlerts } from "@/app/budgets/budget-alerts";
 import { BudgetBar } from "@/app/budgets/budget-bar";
-import { budgetProgress, formatLeft } from "@/lib/budget-form";
+import { budgetProgress, formatLeft, shiftMonth } from "@/lib/budget-form";
 import { listBudgetStatus } from "@/lib/budgets";
 import { requireUser } from "@/lib/dal";
 import { currentMonth, formatMonth, toCents } from "@/lib/format";
-import { getMonthTotals } from "@/lib/transactions";
+import { getMonthlySpending, getMonthTotals } from "@/lib/transactions";
 import { MonthSummary } from "./month-summary";
+import { SpendingTrend } from "./spending-trend";
 
 export const metadata: Metadata = { title: "Dashboard · Finance Tracker" };
+
+// How many months the spending trend covers, ending with this one.
+const TREND_MONTHS = 6;
 
 export default async function DashboardPage() {
   const user = await requireUser();
   const month = currentMonth();
-  const [budgets, totals] = await Promise.all([
+  const [budgets, totals, spending] = await Promise.all([
     listBudgetStatus(user.id, month),
     getMonthTotals(user.id, month),
+    getMonthlySpending(user.id, shiftMonth(month, 1 - TREND_MONTHS), month),
   ]);
 
   return (
@@ -39,6 +44,10 @@ export default async function DashboardPage() {
             month={month}
             incomeCents={toCents(totals.income)}
             expenseCents={toCents(totals.expenses)}
+          />
+
+          <SpendingTrend
+            months={spending.map((m) => ({ month: m.month, cents: toCents(m.expenses) }))}
           />
 
           <section className="rounded-2xl border border-black/[.08] bg-white p-4 sm:p-5 dark:border-white/[.145] dark:bg-zinc-950">

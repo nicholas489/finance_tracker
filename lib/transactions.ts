@@ -47,6 +47,22 @@ export async function getMonthTotals(userId: number, month: string) {
   return totals;
 }
 
+export type MonthSpending = { month: string; expenses: string };
+
+// Expenses for each of the months from `from` to `to` ("YYYY-MM", inclusive),
+// oldest first. Months with no expenses are included with a total of 0.
+export async function getMonthlySpending(userId: number, from: string, to: string) {
+  return sql<MonthSpending[]>`
+    SELECT to_char(m.start, 'YYYY-MM') AS month, COALESCE(SUM(t.amount), 0)::text AS expenses
+      FROM generate_series(${`${from}-01`}::date, ${`${to}-01`}::date, interval '1 month') AS m(start)
+      LEFT JOIN transactions t
+        ON t.user_id = ${userId} AND t.type = 'expense'
+       AND t.date >= m.start AND t.date < m.start + interval '1 month'
+     GROUP BY m.start
+     ORDER BY m.start
+  `;
+}
+
 export async function getTransaction(userId: number, id: number): Promise<Transaction | null> {
   const [row] = await sql<Transaction[]>`
     SELECT ${columns} FROM transactions WHERE id = ${id} AND user_id = ${userId}
