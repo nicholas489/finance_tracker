@@ -2,7 +2,7 @@ import Link from "next/link";
 import { logout } from "@/app/actions/auth";
 
 // The top bar on every signed-in page.
-export function AppHeader({ email }: { email: string }) {
+export function AppHeader({ email, isAdmin }: { email: string; isAdmin: boolean }) {
   return (
     <header className="flex items-center justify-between gap-4 border-b border-black/[.08] bg-white px-6 py-4 dark:border-white/[.145] dark:bg-zinc-950">
       <nav className="flex items-center gap-6">
@@ -27,6 +27,14 @@ export function AppHeader({ email }: { email: string }) {
         >
           Budgets
         </Link>
+        {isAdmin && (
+          <Link
+            href="/admin/users"
+            className="text-sm text-zinc-600 hover:text-foreground dark:text-zinc-400"
+          >
+            Admin
+          </Link>
+        )}
       </nav>
       <div className="flex items-center gap-4">
         <span className="hidden text-sm text-zinc-600 sm:inline dark:text-zinc-400">{email}</span>

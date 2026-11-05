@@ -1,7 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { getSessionUser, SESSION_COOKIE } from "@/lib/session";
 
 // Checks the session against the database. Memoized per request.
@@ -17,5 +17,13 @@ export async function requireUser() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   if (!user.hasSecurityQuestion) redirect("/security-question");
+  return user;
+}
+
+// Use in admin pages and actions. Anyone else gets a 404, so the admin area
+// doesn't reveal that it exists.
+export async function requireAdmin() {
+  const user = await requireUser();
+  if (!user.isAdmin) notFound();
   return user;
 }

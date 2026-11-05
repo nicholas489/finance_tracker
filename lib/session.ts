@@ -36,16 +36,26 @@ export type SessionUser = {
   name: string;
   email: string;
   hasSecurityQuestion: boolean;
+  isAdmin: boolean;
 };
 
 export async function getSessionUser(token: string): Promise<SessionUser | null> {
   const [row] = await sql<
-    { id: number; name: string; email: string; has_security_question: boolean; expires_at: Date }[]
+    {
+      id: number;
+      name: string;
+      email: string;
+      has_security_question: boolean;
+      is_admin: boolean;
+      expires_at: Date;
+    }[]
   >`
     SELECT u.id, u.name, u.email, u.security_answer_hash IS NOT NULL AS has_security_question,
-           s.expires_at
+           u.is_admin, s.expires_at
       FROM sessions s JOIN users u ON u.id = s.user_id
      WHERE s.id = ${hashToken(token)}
+       -- Deactivating deletes sessions too; this covers any created mid-deactivation.
+       AND u.deactivated_at IS NULL
   `;
 
   if (!row) return null;
@@ -58,6 +68,7 @@ export async function getSessionUser(token: string): Promise<SessionUser | null>
     name: row.name,
     email: row.email,
     hasSecurityQuestion: row.has_security_question,
+    isAdmin: row.is_admin,
   };
 }
 
