@@ -17,7 +17,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="flex flex-1 flex-col bg-zinc-50 font-sans dark:bg-black">
-      <AppHeader email={user.email} />
+      <AppHeader email={user.email} isAdmin={user.isAdmin} />
       <main className="mx-auto w-full max-w-3xl px-6 py-12">
         <h1 className="text-2xl font-semibold tracking-tight">Hi, {user.name}</h1>
         <p className="mt-2 text-zinc-600 dark:text-zinc-400">You&apos;re signed in.</p>

@@ -6,7 +6,7 @@ export default async function CategoriesLayout({ children }: LayoutProps<"/categ
 
   return (
     <div className="flex flex-1 flex-col bg-zinc-50 font-sans dark:bg-black">
-      <AppHeader email={user.email} />
+      <AppHeader email={user.email} isAdmin={user.isAdmin} />
       <main className="mx-auto w-full max-w-3xl px-4 py-10 sm:px-6">{children}</main>
     </div>
   );

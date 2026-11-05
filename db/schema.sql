@@ -13,6 +13,13 @@ CREATE TABLE IF NOT EXISTS users (
 ALTER TABLE users ADD COLUMN IF NOT EXISTS security_question    text;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS security_answer_hash text;
 
+-- Admins can view and deactivate other accounts (see lib/admin.ts). Granted
+-- with `npm run admin:grant -- <email>`.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin       boolean     NOT NULL DEFAULT false;
+-- Null while the account is active. Deactivated users can't sign in or reset
+-- their password, and lose their sessions when it happens.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS deactivated_at timestamptz;
+
 CREATE TABLE IF NOT EXISTS sessions (
   id         text        PRIMARY KEY, -- sha256 of the token stored in the cookie
   user_id    integer     NOT NULL REFERENCES users(id) ON DELETE CASCADE,

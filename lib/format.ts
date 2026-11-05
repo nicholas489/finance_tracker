@@ -21,6 +21,18 @@ export function formatDate(date: string) {
   return longDate.format(new Date(`${date}T00:00:00Z`));
 }
 
+const timestampDate = new Intl.DateTimeFormat("en-CA", {
+  year: "numeric",
+  month: "short",
+  day: "numeric",
+  timeZone: "America/Toronto",
+});
+
+// A moment in time, like a created_at column, as "Oct 1, 2026" in the users' time zone.
+export function formatTimestamp(timestamp: Date) {
+  return timestampDate.format(timestamp);
+}
+
 // Today's date as "YYYY-MM-DD". The server runs in UTC, which is already
 // tomorrow on a Toronto evening, so use the users' time zone instead.
 export function today() {

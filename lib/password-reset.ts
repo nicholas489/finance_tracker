@@ -40,11 +40,15 @@ export async function resetPassword(token: string, passwordHash: string): Promis
     `;
     if (!reset || reset.expires_at.getTime() < Date.now()) return null;
 
-    const [{ email }] = await tx<{ email: string }[]>`
-      UPDATE users SET password_hash = ${passwordHash} WHERE id = ${reset.user_id} RETURNING email
+    // Skips an account deactivated after the security answer was checked.
+    const [user] = await tx<{ email: string }[]>`
+      UPDATE users SET password_hash = ${passwordHash}
+       WHERE id = ${reset.user_id} AND deactivated_at IS NULL
+      RETURNING email
     `;
+    if (!user) return null;
     await tx`DELETE FROM password_resets WHERE user_id = ${reset.user_id}`;
     await tx`DELETE FROM sessions WHERE user_id = ${reset.user_id}`;
-    return email;
+    return user.email;
   });
 }

@@ -24,13 +24,16 @@ export type SecurityQuestionRecord = {
   answerHash: string | null;
 };
 
-// Null if no account has this email. question and answerHash are null if the
+// Null if no active account has this email, so a deactivated account can't be
+// unlocked by resetting its password. question and answerHash are null if the
 // account hasn't set up a security question yet.
 export async function findSecurityQuestion(email: string): Promise<SecurityQuestionRecord | null> {
   const [row] = await sql<
     { id: number; security_question: string | null; security_answer_hash: string | null }[]
   >`
-    SELECT id, security_question, security_answer_hash FROM users WHERE email = ${email}
+    SELECT id, security_question, security_answer_hash
+      FROM users
+     WHERE email = ${email} AND deactivated_at IS NULL
   `;
   if (!row) return null;
   return { id: row.id, question: row.security_question, answerHash: row.security_answer_hash };

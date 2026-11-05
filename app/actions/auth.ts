@@ -23,8 +23,8 @@ export async function login(_state: FormState, formData: FormData): Promise<Form
     };
   }
 
-  const [user] = await sql<{ id: number; password_hash: string }[]>`
-    SELECT id, password_hash FROM users WHERE email = ${email}
+  const [user] = await sql<{ id: number; password_hash: string; deactivated_at: Date | null }[]>`
+    SELECT id, password_hash, deactivated_at FROM users WHERE email = ${email}
   `;
 
   const valid = await verifyPassword(password, user?.password_hash ?? DUMMY_HASH);
@@ -34,6 +34,13 @@ export async function login(_state: FormState, formData: FormData): Promise<Form
   }
 
   clearFailures(email);
+  // Only said after a correct password, so it doesn't reveal which emails are deactivated.
+  if (user.deactivated_at) {
+    return {
+      message: "This account has been deactivated. Contact an administrator for help.",
+      values: { email },
+    };
+  }
   await createSession(user.id);
   redirect("/dashboard");
 }
