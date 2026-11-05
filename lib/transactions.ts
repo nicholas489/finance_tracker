@@ -31,6 +31,22 @@ export async function listTransactions(userId: number, filters: TransactionFilte
   `;
 }
 
+export type MonthTotals = { income: string; expenses: string };
+
+// One month's totals. month is "YYYY-MM". Summed in the database and returned
+// as text so cents are never rounded through a float.
+export async function getMonthTotals(userId: number, month: string) {
+  const start = `${month}-01`;
+  const [totals] = await sql<MonthTotals[]>`
+    SELECT COALESCE(SUM(amount) FILTER (WHERE type = 'income'), 0)::text AS income,
+           COALESCE(SUM(amount) FILTER (WHERE type = 'expense'), 0)::text AS expenses
+      FROM transactions
+     WHERE user_id = ${userId}
+       AND date >= ${start}::date AND date < ${start}::date + interval '1 month'
+  `;
+  return totals;
+}
+
 export async function getTransaction(userId: number, id: number): Promise<Transaction | null> {
   const [row] = await sql<Transaction[]>`
     SELECT ${columns} FROM transactions WHERE id = ${id} AND user_id = ${userId}

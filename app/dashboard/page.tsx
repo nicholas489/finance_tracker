@@ -6,33 +6,40 @@ import { BudgetBar } from "@/app/budgets/budget-bar";
 import { budgetProgress, formatLeft } from "@/lib/budget-form";
 import { listBudgetStatus } from "@/lib/budgets";
 import { requireUser } from "@/lib/dal";
-import { currentMonth, formatMonth } from "@/lib/format";
+import { currentMonth, formatMonth, toCents } from "@/lib/format";
+import { getMonthTotals } from "@/lib/transactions";
+import { MonthSummary } from "./month-summary";
 
 export const metadata: Metadata = { title: "Dashboard · Finance Tracker" };
 
 export default async function DashboardPage() {
   const user = await requireUser();
   const month = currentMonth();
-  const budgets = await listBudgetStatus(user.id, month);
+  const [budgets, totals] = await Promise.all([
+    listBudgetStatus(user.id, month),
+    getMonthTotals(user.id, month),
+  ]);
 
   return (
     <div className="flex flex-1 flex-col bg-zinc-50 font-sans dark:bg-black">
       <AppHeader email={user.email} isAdmin={user.isAdmin} />
       <main className="mx-auto w-full max-w-3xl px-6 py-12">
         <h1 className="text-2xl font-semibold tracking-tight">Hi, {user.name}</h1>
-        <p className="mt-2 text-zinc-600 dark:text-zinc-400">You&apos;re signed in.</p>
-        <Link
-          href="/transactions"
-          className="mt-6 inline-flex h-10 items-center rounded-lg bg-foreground px-4 text-sm font-medium text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc]"
-        >
-          View transactions
-        </Link>
+        <p className="mt-2 text-zinc-600 dark:text-zinc-400">
+          Here&apos;s how {formatMonth(month)} is going.
+        </p>
 
-        <div className="mt-10 flex flex-col gap-4">
+        <div className="mt-8 flex flex-col gap-4">
           {/* Hidden when there's nothing to warn about, so it leaves no gap. */}
           <div className="empty:hidden">
             <BudgetAlerts budgets={budgets} month={month} />
           </div>
+
+          <MonthSummary
+            month={month}
+            incomeCents={toCents(totals.income)}
+            expenseCents={toCents(totals.expenses)}
+          />
 
           <section className="rounded-2xl border border-black/[.08] bg-white p-4 sm:p-5 dark:border-white/[.145] dark:bg-zinc-950">
             <div className="flex items-baseline justify-between gap-4">
