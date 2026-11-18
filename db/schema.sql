@@ -74,6 +74,23 @@ CREATE TABLE IF NOT EXISTS budgets (
 -- One budget per category.
 CREATE UNIQUE INDEX IF NOT EXISTS budgets_user_id_category ON budgets(user_id, category);
 
+-- A budget's monthly limit, by the month it starts applying. Each month uses
+-- the latest row on or before it, so a budget carries over to every new month,
+-- with spending counted from $0 again, until it's changed; changing it leaves
+-- earlier months as they were. A null amount means the budget was removed
+-- from that month on. (budgets.amount just holds the last limit saved.)
+CREATE TABLE IF NOT EXISTS budget_amounts (
+  budget_id integer       NOT NULL REFERENCES budgets(id) ON DELETE CASCADE,
+  month     date          NOT NULL CHECK (extract(day FROM month) = 1), -- the 1st of the month
+  amount    numeric(12,2) CHECK (amount > 0),
+  PRIMARY KEY (budget_id, month)
+);
+-- Budgets saved before limits were kept by month start in the month they were created.
+INSERT INTO budget_amounts (budget_id, month, amount)
+SELECT b.id, date_trunc('month', b.created_at AT TIME ZONE 'America/Toronto')::date, b.amount
+  FROM budgets b
+ WHERE NOT EXISTS (SELECT 1 FROM budget_amounts a WHERE a.budget_id = b.id);
+
 -- Income or an expense that repeats, like rent, a paycheque or a subscription.
 -- Each date it comes due, a copy is added to transactions (see lib/recurring.ts).
 -- next_date is the next date still to be added; last_posted the latest one
@@ -148,6 +165,7 @@ ALTER TABLE password_resets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE transactions    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE categories      ENABLE ROW LEVEL SECURITY;
 ALTER TABLE budgets         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE budget_amounts  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE recurring_transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE bills           ENABLE ROW LEVEL SECURITY;
 ALTER TABLE savings_goals   ENABLE ROW LEVEL SECURITY;
