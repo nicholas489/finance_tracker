@@ -3,11 +3,9 @@ import { formatMoney, toCents } from "@/lib/format";
 import { parseAmount } from "@/lib/transaction-form";
 
 export type BudgetFormState =
-  | {
-      error?: string;
-      // Echoed back so the form keeps what the user typed after an error.
-      values?: { category: string; amount: string };
-    }
+  // The form isn't reset after a failed save, so it keeps what the user
+  // entered without the values being echoed back.
+  | { error?: string }
   | undefined;
 
 // categories is everything the user can file an expense under.
@@ -16,10 +14,10 @@ export function parseBudgetForm(
   categories: readonly string[],
 ): { category: string; amount: string } | { state: BudgetFormState } {
   const values = { category: field(formData, "category"), amount: field(formData, "amount").trim() };
-  if (!categories.includes(values.category)) return { state: { error: "Choose a category.", values } };
+  if (!categories.includes(values.category)) return { state: { error: "Choose a category." } };
 
   const amount = parseAmount(values.amount);
-  if ("error" in amount) return { state: { error: amount.error, values } };
+  if ("error" in amount) return { state: { error: amount.error } };
   return { category: values.category, amount: amount.amount };
 }
 

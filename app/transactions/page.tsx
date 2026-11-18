@@ -51,7 +51,13 @@ export default async function TransactionsPage(props: PageProps<"/transactions">
   const [categories] = await Promise.all([listExpenseCategories(user.id), postDueRecurring(user.id)]);
   const params = await props.searchParams;
   const filters = parseFilters(params, categories);
-  const transactions = await listTransactions(user.id, filters);
+  // Dates are "YYYY-MM-DD", so they compare as strings. Nothing can fall in a
+  // backwards range, so say why instead of showing an empty list.
+  const rangeError =
+    filters.from && filters.to && filters.from > filters.to
+      ? `"From" (${formatDate(filters.from)}) is after "To" (${formatDate(filters.to)}). Choose a From date on or before the To date.`
+      : undefined;
+  const transactions = rangeError ? [] : await listTransactions(user.id, filters);
   // Set after saving an expense that left its budget at 80% or more. The
   // alert is worked out from the budget itself, never from the URL.
   const alertMonth = typeof params.month === "string" ? parseMonth(params.month) : undefined;
@@ -103,11 +109,36 @@ export default async function TransactionsPage(props: PageProps<"/transactions">
         className="mt-6 grid grid-cols-2 gap-3 rounded-2xl border border-black/[.08] bg-white p-4 sm:grid-cols-4 dark:border-white/[.145] dark:bg-zinc-950"
       >
         <FilterField label="From" htmlFor="from">
-          <input id="from" name="from" type="date" defaultValue={filters.from} className={inputClass} />
+          <input
+            id="from"
+            name="from"
+            type="date"
+            defaultValue={filters.from}
+            aria-invalid={rangeError ? true : undefined}
+            aria-describedby={rangeError ? "date-range-error" : undefined}
+            className={inputClass}
+          />
         </FilterField>
         <FilterField label="To" htmlFor="to">
-          <input id="to" name="to" type="date" defaultValue={filters.to} className={inputClass} />
+          <input
+            id="to"
+            name="to"
+            type="date"
+            defaultValue={filters.to}
+            aria-invalid={rangeError ? true : undefined}
+            aria-describedby={rangeError ? "date-range-error" : undefined}
+            className={inputClass}
+          />
         </FilterField>
+        {rangeError && (
+          <p
+            id="date-range-error"
+            role="alert"
+            className="col-span-2 text-sm text-red-600 sm:col-span-4 dark:text-red-400"
+          >
+            {rangeError}
+          </p>
+        )}
         <FilterField label="Type" htmlFor="type">
           <select
             id="type"
@@ -161,7 +192,9 @@ export default async function TransactionsPage(props: PageProps<"/transactions">
 
       {transactions.length === 0 ? (
         <p className="mt-6 rounded-2xl border border-dashed border-black/[.12] px-6 py-12 text-center text-sm text-zinc-600 dark:border-white/[.18] dark:text-zinc-400">
-          {isFiltered
+          {rangeError
+            ? "No transactions to show: the From date is after the To date."
+            : isFiltered
             ? "No transactions match these filters."
             : "No transactions yet. Add your first expense or income to get started."}
         </p>
