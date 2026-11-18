@@ -2,7 +2,8 @@ import "server-only";
 import { sql } from "@/lib/db";
 import type { TransactionInput, TransactionType } from "@/lib/transaction-form";
 
-export type Transaction = TransactionInput & { id: number };
+// recurringId is set when it was added by a recurring transaction.
+export type Transaction = TransactionInput & { id: number; recurringId: number | null };
 
 export type TransactionFilters = {
   type?: TransactionType;
@@ -14,7 +15,8 @@ export type TransactionFilters = {
 // amount comes back as text and date as "YYYY-MM-DD" so neither is shifted by
 // float rounding or the server's time zone.
 const columns = sql`
-  id, type, name, amount::text AS amount, to_char(date, 'YYYY-MM-DD') AS date, category, description
+  id, type, name, amount::text AS amount, to_char(date, 'YYYY-MM-DD') AS date, category, description,
+  recurring_id AS "recurringId"
 `;
 
 // Every query is scoped to the user, so nobody can read or change another

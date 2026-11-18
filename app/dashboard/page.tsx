@@ -1,12 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AppHeader } from "@/app/app-header";
+import { BillRow } from "@/app/bills/bill-row";
 import { BudgetAlerts } from "@/app/budgets/budget-alerts";
 import { BudgetBar } from "@/app/budgets/budget-bar";
+import { listDueBills } from "@/lib/bills";
 import { budgetProgress, formatLeft, shiftMonth } from "@/lib/budget-form";
 import { listBudgetStatus } from "@/lib/budgets";
 import { requireUser } from "@/lib/dal";
-import { currentMonth, formatMonth, toCents } from "@/lib/format";
+import { currentMonth, formatMonth, toCents, today } from "@/lib/format";
+import { postDueRecurring } from "@/lib/recurring";
 import { getMonthlySpending, getMonthTotals } from "@/lib/transactions";
 import { MonthSummary } from "./month-summary";
 import { SpendingTrend } from "./spending-trend";
@@ -19,11 +22,16 @@ const TREND_MONTHS = 6;
 export default async function DashboardPage() {
   const user = await requireUser();
   const month = currentMonth();
-  const [budgets, totals, spending] = await Promise.all([
+  const todayDate = today();
+  // Add recurring transactions that have come due before totalling anything.
+  await postDueRecurring(user.id);
+  const [budgets, totals, spending, dueBills] = await Promise.all([
     listBudgetStatus(user.id, month),
     getMonthTotals(user.id, month),
     getMonthlySpending(user.id, shiftMonth(month, 1 - TREND_MONTHS), month),
+    listDueBills(user.id, todayDate),
   ]);
+  const overdue = dueBills.filter((bill) => bill.dueDate < todayDate).length;
 
   return (
     <div className="flex flex-1 flex-col bg-zinc-50 font-sans dark:bg-black">
@@ -35,6 +43,34 @@ export default async function DashboardPage() {
         </p>
 
         <div className="mt-8 flex flex-col gap-4">
+          {/* Bills that are overdue or within their reminder window. */}
+          {dueBills.length > 0 && (
+            <section
+              aria-labelledby="bill-reminders"
+              className={`rounded-2xl border bg-white dark:bg-zinc-950 ${
+                overdue
+                  ? "border-red-300 dark:border-red-500/40"
+                  : "border-amber-300 dark:border-amber-500/40"
+              }`}
+            >
+              <div className="flex items-baseline justify-between gap-4 px-4 pt-4 sm:px-5">
+                <h2 id="bill-reminders" className="text-lg font-semibold">
+                  {overdue
+                    ? `${overdue} overdue bill${overdue === 1 ? "" : "s"}`
+                    : `${dueBills.length} bill${dueBills.length === 1 ? "" : "s"} due soon`}
+                </h2>
+                <Link href="/bills" className="shrink-0 text-sm underline-offset-4 hover:underline">
+                  All bills
+                </Link>
+              </div>
+              <ul className="mt-1 divide-y divide-black/[.08] dark:divide-white/[.145]">
+                {dueBills.map((bill) => (
+                  <BillRow key={bill.id} bill={bill} today={todayDate} compact />
+                ))}
+              </ul>
+            </section>
+          )}
+
           {/* Hidden when there's nothing to warn about, so it leaves no gap. */}
           <div className="empty:hidden">
             <BudgetAlerts budgets={budgets} month={month} />

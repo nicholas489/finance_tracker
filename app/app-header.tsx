@@ -5,7 +5,7 @@ import { logout } from "@/app/actions/auth";
 export function AppHeader({ email, isAdmin }: { email: string; isAdmin: boolean }) {
   return (
     <header className="flex items-center justify-between gap-4 border-b border-black/[.08] bg-white px-6 py-4 dark:border-white/[.145] dark:bg-zinc-950">
-      <nav className="flex items-center gap-6">
+      <nav className="flex flex-wrap items-center gap-x-6 gap-y-2">
         <Link href="/dashboard" className="font-semibold">
           Finance Tracker
         </Link>
@@ -26,6 +26,12 @@ export function AppHeader({ email, isAdmin }: { email: string; isAdmin: boolean 
           className="text-sm text-zinc-600 hover:text-foreground dark:text-zinc-400"
         >
           Budgets
+        </Link>
+        <Link
+          href="/bills"
+          className="text-sm text-zinc-600 hover:text-foreground dark:text-zinc-400"
+        >
+          Bills
         </Link>
         {isAdmin && (
           <Link

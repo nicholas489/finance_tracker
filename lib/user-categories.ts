@@ -35,8 +35,8 @@ export async function createCategory(userId: number, name: string) {
   }
 }
 
-// Transactions and budgets store the category's name, so they're renamed along
-// with it.
+// Transactions, budgets, recurring transactions and bills store the category's
+// name, so they're renamed along with it.
 export async function renameCategory(
   userId: number,
   id: number,
@@ -57,6 +57,14 @@ export async function renameCategory(
         UPDATE budgets SET category = ${name}
          WHERE user_id = ${userId} AND category = ${old.name}
       `;
+      await tx`
+        UPDATE recurring_transactions SET category = ${name}
+         WHERE user_id = ${userId} AND category = ${old.name}
+      `;
+      await tx`
+        UPDATE bills SET category = ${name}
+         WHERE user_id = ${userId} AND category = ${old.name}
+      `;
       return "ok" as const;
     });
   } catch (error) {
@@ -65,8 +73,9 @@ export async function renameCategory(
   }
 }
 
-// Expenses must keep a category, so the deleted one's move to "Other". Its
-// budget is removed rather than moved, since "Other" may have one already.
+// Expenses must keep a category, so the deleted one's move to "Other", along
+// with recurring expenses and bills. Its budget is removed rather than moved,
+// since "Other" may have one already.
 export async function deleteCategory(userId: number, id: number) {
   await sql.begin(async (tx) => {
     const [deleted] = await tx<{ name: string }[]>`
@@ -78,5 +87,13 @@ export async function deleteCategory(userId: number, id: number) {
        WHERE user_id = ${userId} AND category = ${deleted.name}
     `;
     await tx`DELETE FROM budgets WHERE user_id = ${userId} AND category = ${deleted.name}`;
+    await tx`
+      UPDATE recurring_transactions SET category = ${FALLBACK_CATEGORY}
+       WHERE user_id = ${userId} AND category = ${deleted.name}
+    `;
+    await tx`
+      UPDATE bills SET category = ${FALLBACK_CATEGORY}
+       WHERE user_id = ${userId} AND category = ${deleted.name}
+    `;
   });
 }

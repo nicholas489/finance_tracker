@@ -9,11 +9,13 @@ import { parseMonth } from "@/lib/budget-form";
 import { getBudgetStatus } from "@/lib/budgets";
 import { requireUser } from "@/lib/dal";
 import { formatDate, formatMoney, toCents } from "@/lib/format";
+import { postDueRecurring } from "@/lib/recurring";
 import { isTransactionType, isValidDate } from "@/lib/transaction-form";
 import { listTransactions, type TransactionFilters } from "@/lib/transactions";
 import { listExpenseCategories } from "@/lib/user-categories";
 import { DeleteButton } from "./delete-button";
 import { SpendingChart } from "./spending-chart";
+import { TransactionTabs } from "./transaction-tabs";
 
 export const metadata: Metadata = { title: "Transactions · Finance Tracker" };
 
@@ -45,7 +47,8 @@ function parseFilters(
 
 export default async function TransactionsPage(props: PageProps<"/transactions">) {
   const user = await requireUser();
-  const categories = await listExpenseCategories(user.id);
+  // Add anything recurring that's come due before listing.
+  const [categories] = await Promise.all([listExpenseCategories(user.id), postDueRecurring(user.id)]);
   const params = await props.searchParams;
   const filters = parseFilters(params, categories);
   const transactions = await listTransactions(user.id, filters);
@@ -74,6 +77,7 @@ export default async function TransactionsPage(props: PageProps<"/transactions">
 
   return (
     <>
+      <TransactionTabs current="all" />
       <div className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold tracking-tight">Transactions</h1>
         <div className="flex gap-2">
@@ -169,6 +173,14 @@ export default async function TransactionsPage(props: PageProps<"/transactions">
                 <p className="truncate font-medium">{t.name}</p>
                 <p className="mt-0.5 text-xs text-zinc-600 dark:text-zinc-400">
                   {formatDate(t.date)} · {t.category ?? "Income"}
+                  {t.recurringId !== null && (
+                    <>
+                      {" · "}
+                      <Link href="/transactions/recurring" className="underline-offset-4 hover:underline">
+                        Recurring
+                      </Link>
+                    </>
+                  )}
                 </p>
                 {t.description && (
                   <p className="mt-1 text-sm break-words text-zinc-600 dark:text-zinc-400">
