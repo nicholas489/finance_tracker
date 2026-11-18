@@ -33,6 +33,12 @@ export function AppHeader({ email, isAdmin }: { email: string; isAdmin: boolean 
         >
           Bills
         </Link>
+        <Link
+          href="/goals"
+          className="text-sm text-zinc-600 hover:text-foreground dark:text-zinc-400"
+        >
+          Goals
+        </Link>
         {isAdmin && (
           <Link
             href="/admin/users"

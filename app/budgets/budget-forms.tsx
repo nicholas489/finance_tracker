@@ -6,7 +6,7 @@ import { addBudget, editBudget, removeBudget } from "@/app/actions/budgets";
 import { inputClass } from "@/app/(auth)/form-ui";
 import { DeleteButton } from "@/app/transactions/delete-button";
 import { budgetProgress, formatLeft } from "@/lib/budget-form";
-import { formatMoney } from "@/lib/format";
+import { formatMoney, formatMonth } from "@/lib/format";
 import { BudgetBadge } from "./budget-alerts";
 import { BudgetBar } from "./budget-bar";
 
@@ -24,8 +24,9 @@ function FormError({ id, error }: { id: string; error?: string }) {
   );
 }
 
-// categories are the ones without a budget yet.
-export function AddBudgetForm({ categories }: { categories: string[] }) {
+// categories are the ones without a budget in month yet. The budget starts in
+// month and carries over to the months after it.
+export function AddBudgetForm({ categories, month }: { categories: string[]; month: string }) {
   // React resets the form after each submit, back to defaultValue: empty after
   // a success, or what the user typed after an error.
   const [state, formAction, pending] = useActionState(addBudget, undefined);
@@ -33,6 +34,7 @@ export function AddBudgetForm({ categories }: { categories: string[] }) {
 
   return (
     <form action={formAction} noValidate>
+      <input type="hidden" name="month" value={month} />
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
         <div className="flex min-w-0 flex-1 flex-col gap-1.5">
           <label htmlFor="new-budget-category" className="text-sm font-medium">
@@ -75,17 +77,20 @@ export function AddBudgetForm({ categories }: { categories: string[] }) {
   );
 }
 
+// Editing or deleting applies from month onward; earlier months keep their limit.
 export function BudgetRow({
   id,
   category,
   amount,
   spent,
+  month,
   transactionsHref,
 }: {
   id: number;
   category: string;
   amount: string;
   spent: string;
+  month: string;
   // This month's expenses in the category.
   transactionsHref: string;
 }) {
@@ -124,9 +129,9 @@ export function BudgetRow({
                 Edit
               </button>
               <DeleteButton
-                action={removeBudget.bind(null, id)}
+                action={removeBudget.bind(null, id, month)}
                 name={`${category} budget`}
-                warning="Your expenses won't be affected. "
+                warning={`It will be removed from ${formatMonth(month)} onward; earlier months keep it. Your expenses won't be affected. `}
               />
             </div>
           )}
@@ -141,7 +146,7 @@ export function BudgetRow({
             event.preventDefault();
             const formData = new FormData(event.currentTarget);
             startTransition(async () => {
-              const result = await editBudget(id, formData);
+              const result = await editBudget(id, month, formData);
               setError(result);
               if (!result) setEditing(false);
             });
@@ -178,6 +183,11 @@ export function BudgetRow({
             </button>
           </div>
           <FormError id={`${inputId}-error`} error={error} />
+          {!error && (
+            <p className="mt-1.5 text-xs text-zinc-600 dark:text-zinc-400">
+              Applies to {formatMonth(month)} and the months after it. Earlier months keep their limit.
+            </p>
+          )}
         </form>
       )}
     </li>

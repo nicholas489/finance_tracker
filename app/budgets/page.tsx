@@ -64,8 +64,9 @@ export default async function BudgetsPage(props: PageProps<"/budgets">) {
         </nav>
       </div>
       <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-        Set a monthly limit for any expense category. Each budget starts fresh on the first of the
-        month.
+        Set a monthly limit for any expense category. Budgets carry over to every new month, with
+        spending starting again from $0 on the 1st. Changes apply from the month you&apos;re viewing
+        onward.
       </p>
 
       {budgets.length > 0 && (
@@ -82,13 +83,14 @@ export default async function BudgetsPage(props: PageProps<"/budgets">) {
 
       {unbudgeted.length > 0 && (
         <div className={`mt-6 p-4 ${cardClass}`}>
-          <AddBudgetForm categories={unbudgeted} />
+          <AddBudgetForm categories={unbudgeted} month={month} />
         </div>
       )}
 
       {budgets.length === 0 ? (
         <p className="mt-6 rounded-2xl border border-dashed border-black/[.12] px-6 py-12 text-center text-sm text-zinc-600 dark:border-white/[.18] dark:text-zinc-400">
-          No budgets yet. Add one above to see how much you have left to spend each month.
+          No budgets for {formatMonth(month)}. Add one above to see how much you have left to spend
+          each month.
         </p>
       ) : (
         <ul className={`mt-6 divide-y divide-black/[.08] dark:divide-white/[.145] ${cardClass}`}>
@@ -99,6 +101,7 @@ export default async function BudgetsPage(props: PageProps<"/budgets">) {
               category={budget.category}
               amount={budget.amount}
               spent={budget.spent}
+              month={month}
               transactionsHref={`/transactions?${new URLSearchParams({ type: "expense", category: budget.category, from, to })}`}
             />
           ))}
