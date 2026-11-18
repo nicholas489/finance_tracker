@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useState, useTransition } from "react";
+import { startTransition, useActionState, useRef, useState, useTransition } from "react";
 import { addBudget, editBudget, removeBudget } from "@/app/actions/budgets";
 import { inputClass } from "@/app/(auth)/form-ui";
 import { DeleteButton } from "@/app/transactions/delete-button";
-import { budgetProgress, formatLeft } from "@/lib/budget-form";
+import { budgetProgress, formatLeft, type BudgetFormState } from "@/lib/budget-form";
 import { formatMoney, formatMonth } from "@/lib/format";
 import { BudgetBadge } from "./budget-alerts";
 import { BudgetBar } from "./budget-bar";
@@ -27,13 +27,32 @@ function FormError({ id, error }: { id: string; error?: string }) {
 // categories are the ones without a budget in month yet. The budget starts in
 // month and carries over to the months after it.
 export function AddBudgetForm({ categories, month }: { categories: string[]; month: string }) {
-  // React resets the form after each submit, back to defaultValue: empty after
-  // a success, or what the user typed after an error.
-  const [state, formAction, pending] = useActionState(addBudget, undefined);
+  const formRef = useRef<HTMLFormElement>(null);
+  const [state, formAction, pending] = useActionState(
+    async (prev: BudgetFormState, formData: FormData) => {
+      const result = await addBudget(prev, formData);
+      // Only clear the fields once the budget is saved.
+      if (!result) formRef.current?.reset();
+      return result;
+    },
+    undefined,
+  );
   const describedBy = state?.error ? "new-budget-error" : undefined;
 
   return (
-    <form action={formAction} noValidate>
+    <form
+      ref={formRef}
+      action={formAction}
+      // Submitting through onSubmit stops React from resetting the form
+      // afterwards, so a failed save keeps the category and amount the user
+      // entered (a reset sends the dropdown back to its first option).
+      onSubmit={(event) => {
+        event.preventDefault();
+        const formData = new FormData(event.currentTarget);
+        startTransition(() => formAction(formData));
+      }}
+      noValidate
+    >
       <input type="hidden" name="month" value={month} />
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
         <div className="flex min-w-0 flex-1 flex-col gap-1.5">
@@ -43,7 +62,6 @@ export function AddBudgetForm({ categories, month }: { categories: string[]; mon
           <select
             id="new-budget-category"
             name="category"
-            defaultValue={state?.values?.category}
             className={`${inputClass} dark:bg-zinc-950`}
           >
             {categories.map((category) => (
@@ -62,7 +80,6 @@ export function AddBudgetForm({ categories, month }: { categories: string[]; mon
             name="amount"
             inputMode="decimal"
             placeholder="e.g. 400.00"
-            defaultValue={state?.values?.amount}
             aria-invalid={state?.error ? true : undefined}
             aria-describedby={describedBy}
             className={inputClass}
