@@ -8,6 +8,7 @@ const protectedPrefixes = [
   "/categories",
   "/budgets",
   "/bills",
+  "/goals",
   "/admin",
 ];
 

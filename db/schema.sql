@@ -123,6 +123,22 @@ CREATE TABLE IF NOT EXISTS bills (
 );
 CREATE INDEX IF NOT EXISTS bills_user_id_due_date ON bills(user_id, due_date);
 
+-- An amount to save by a deadline. saved is how much the user has put toward
+-- it so far; they add money (or take it back out) from the Goals page. Progress
+-- is measured from start_date, the day the goal was created.
+CREATE TABLE IF NOT EXISTS savings_goals (
+  id         integer       GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  user_id    integer       NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name       text          NOT NULL,
+  target     numeric(12,2) NOT NULL CHECK (target > 0),
+  saved      numeric(12,2) NOT NULL DEFAULT 0 CHECK (saved >= 0),
+  start_date date          NOT NULL,
+  deadline   date          NOT NULL,
+  notes      text,
+  created_at timestamptz   NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS savings_goals_user_id_deadline ON savings_goals(user_id, deadline);
+
 -- Supabase exposes the public schema through its REST API to anyone holding the
 -- publishable key. RLS with no policies blocks that route entirely; the app
 -- connects as the table owner, which RLS doesn't apply to.
@@ -134,3 +150,4 @@ ALTER TABLE categories      ENABLE ROW LEVEL SECURITY;
 ALTER TABLE budgets         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE recurring_transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE bills           ENABLE ROW LEVEL SECURITY;
+ALTER TABLE savings_goals   ENABLE ROW LEVEL SECURITY;
