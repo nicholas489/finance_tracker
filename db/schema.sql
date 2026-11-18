@@ -74,6 +74,55 @@ CREATE TABLE IF NOT EXISTS budgets (
 -- One budget per category.
 CREATE UNIQUE INDEX IF NOT EXISTS budgets_user_id_category ON budgets(user_id, category);
 
+-- Income or an expense that repeats, like rent, a paycheque or a subscription.
+-- Each date it comes due, a copy is added to transactions (see lib/recurring.ts).
+-- next_date is the next date still to be added; last_posted the latest one
+-- that was. Category is stored by name like transactions.category.
+CREATE TABLE IF NOT EXISTS recurring_transactions (
+  id          integer       GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  user_id     integer       NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  type        text          NOT NULL CHECK (type IN ('income', 'expense')),
+  name        text          NOT NULL,
+  amount      numeric(12,2) NOT NULL CHECK (amount > 0),
+  category    text,
+  description text,
+  frequency   text          NOT NULL CHECK (frequency IN ('weekly', 'biweekly', 'monthly', 'quarterly', 'yearly')),
+  start_date  date          NOT NULL, -- anchors the schedule, e.g. the 31st for monthly
+  end_date    date,                   -- inclusive; null repeats forever
+  next_date   date          NOT NULL,
+  last_posted date,
+  paused      boolean       NOT NULL DEFAULT false,
+  created_at  timestamptz   NOT NULL DEFAULT now(),
+  CONSTRAINT recurring_category_for_expenses CHECK ((type = 'expense') = (category IS NOT NULL)),
+  CONSTRAINT recurring_end_after_start CHECK (end_date IS NULL OR end_date >= start_date)
+);
+CREATE INDEX IF NOT EXISTS recurring_transactions_user_id_next_date ON recurring_transactions(user_id, next_date);
+
+-- The recurring transaction a transaction was added from, if any. Deleting the
+-- recurring transaction keeps the ones it already added.
+ALTER TABLE transactions ADD COLUMN IF NOT EXISTS recurring_id integer
+  REFERENCES recurring_transactions(id) ON DELETE SET NULL;
+
+-- A bill to remember to pay. Unlike a recurring transaction nothing is added
+-- automatically: the user marks it paid, which can also record the expense,
+-- and moves due_date on to the next one. due_date is null once a one-time bill
+-- is paid. Category is stored by name like transactions.category.
+CREATE TABLE IF NOT EXISTS bills (
+  id           integer       GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  user_id      integer       NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name         text          NOT NULL,
+  amount       numeric(12,2) NOT NULL CHECK (amount > 0),
+  category     text          NOT NULL,
+  frequency    text          NOT NULL CHECK (frequency IN ('once', 'weekly', 'biweekly', 'monthly', 'quarterly', 'yearly')),
+  start_date   date          NOT NULL, -- anchors the schedule, e.g. the 31st for monthly
+  due_date     date,
+  remind_days  integer       NOT NULL DEFAULT 3 CHECK (remind_days BETWEEN 0 AND 60), -- shown on the dashboard this many days ahead
+  last_paid_on date,
+  notes        text,
+  created_at   timestamptz   NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS bills_user_id_due_date ON bills(user_id, due_date);
+
 -- Supabase exposes the public schema through its REST API to anyone holding the
 -- publishable key. RLS with no policies blocks that route entirely; the app
 -- connects as the table owner, which RLS doesn't apply to.
@@ -83,3 +132,5 @@ ALTER TABLE password_resets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE transactions    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE categories      ENABLE ROW LEVEL SECURITY;
 ALTER TABLE budgets         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE recurring_transactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE bills           ENABLE ROW LEVEL SECURITY;

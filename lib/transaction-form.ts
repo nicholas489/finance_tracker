@@ -54,12 +54,8 @@ export function parseAmount(raw: string): { amount: string } | { error: string }
   return { amount };
 }
 
-// categories is everything the user can file an expense under.
-export function parseTransactionForm(
-  formData: FormData,
-  categories: readonly string[],
-): { input: TransactionInput } | { state: TransactionFormState } {
-  const values: TransactionValues = {
+export function readTransactionValues(formData: FormData): TransactionValues {
+  return {
     type: field(formData, "type"),
     name: field(formData, "name").trim(),
     amount: field(formData, "amount").trim(),
@@ -67,6 +63,14 @@ export function parseTransactionForm(
     category: field(formData, "category"),
     description: field(formData, "description").trim(),
   };
+}
+
+// categories is everything the user can file an expense under.
+export function parseTransactionForm(
+  formData: FormData,
+  categories: readonly string[],
+): { input: TransactionInput } | { state: TransactionFormState } {
+  const values = readTransactionValues(formData);
 
   if (!isTransactionType(values.type)) {
     return { state: { message: "Choose whether this is an expense or income.", values } };

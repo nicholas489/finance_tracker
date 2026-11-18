@@ -5,6 +5,7 @@ import { budgetProgress, monthRange, parseMonth, shiftMonth } from "@/lib/budget
 import { listBudgetStatus } from "@/lib/budgets";
 import { requireUser } from "@/lib/dal";
 import { currentMonth, formatMonth } from "@/lib/format";
+import { postDueRecurring } from "@/lib/recurring";
 import { listExpenseCategories } from "@/lib/user-categories";
 import { AddBudgetForm, BudgetRow } from "./budget-forms";
 
@@ -21,6 +22,8 @@ export default async function BudgetsPage(props: PageProps<"/budgets">) {
   const thisMonth = currentMonth();
   // The URL can hold anything, so an invalid month falls back to this one.
   const month = (typeof monthParam === "string" && parseMonth(monthParam)) || thisMonth;
+  // Recurring expenses that have come due count toward spending.
+  await postDueRecurring(user.id);
   const [budgets, categories] = await Promise.all([
     listBudgetStatus(user.id, month),
     listExpenseCategories(user.id),
