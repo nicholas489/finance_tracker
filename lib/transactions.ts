@@ -10,7 +10,14 @@ export type TransactionFilters = {
   category?: string;
   from?: string; // inclusive, "YYYY-MM-DD"
   to?: string; // inclusive, "YYYY-MM-DD"
+  search?: string; // matches anywhere in the name or description, ignoring case
 };
+
+// LIKE treats % and _ as wildcards, so escape them (and the escape character)
+// to make a search for "50%" match that text rather than everything.
+function escapeLike(text: string) {
+  return text.replace(/[\\%_]/g, "\\$&");
+}
 
 // amount comes back as text and date as "YYYY-MM-DD" so neither is shifted by
 // float rounding or the server's time zone.
@@ -22,6 +29,7 @@ const columns = sql`
 // Every query is scoped to the user, so nobody can read or change another
 // user's transactions by guessing an id.
 export async function listTransactions(userId: number, filters: TransactionFilters) {
+  const pattern = filters.search ? `%${escapeLike(filters.search)}%` : "";
   return sql<Transaction[]>`
     SELECT ${columns} FROM transactions
      WHERE user_id = ${userId}
@@ -29,6 +37,7 @@ export async function listTransactions(userId: number, filters: TransactionFilte
        ${filters.category ? sql`AND category = ${filters.category}` : sql``}
        ${filters.from ? sql`AND date >= ${filters.from}` : sql``}
        ${filters.to ? sql`AND date <= ${filters.to}` : sql``}
+       ${pattern ? sql`AND (name ILIKE ${pattern} ESCAPE '\\' OR description ILIKE ${pattern} ESCAPE '\\')` : sql``}
      ORDER BY date DESC, id DESC
   `;
 }

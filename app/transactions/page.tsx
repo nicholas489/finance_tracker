@@ -24,6 +24,8 @@ const buttonClass =
 const primaryButtonClass = `${buttonClass} bg-foreground text-background hover:bg-[#383838] dark:hover:bg-[#ccc]`;
 const secondaryButtonClass = `${buttonClass} border border-black/[.12] hover:bg-black/[.04] dark:border-white/[.18] dark:hover:bg-white/[.06]`;
 
+const SEARCH_MAX = 100;
+
 // The URL can hold anything, so invalid filters are ignored rather than trusted.
 function parseFilters(
   params: Record<string, string | string[] | undefined>,
@@ -37,11 +39,13 @@ function parseFilters(
   const category = get("category");
   const from = get("from");
   const to = get("to");
+  const search = get("q").trim().slice(0, SEARCH_MAX);
   return {
     type: isTransactionType(type) ? type : undefined,
     category: categories.includes(category) ? category : undefined,
     from: isValidDate(from) ? from : undefined,
     to: isValidDate(to) ? to : undefined,
+    search: search || undefined,
   };
 }
 
@@ -108,6 +112,19 @@ export default async function TransactionsPage(props: PageProps<"/transactions">
         key={JSON.stringify(filters)}
         className="mt-6 grid grid-cols-2 gap-3 rounded-2xl border border-black/[.08] bg-white p-4 sm:grid-cols-4 dark:border-white/[.145] dark:bg-zinc-950"
       >
+        <div className="col-span-2 sm:col-span-4">
+          <FilterField label="Search" htmlFor="q">
+            <input
+              id="q"
+              name="q"
+              type="search"
+              placeholder="Search by name or description"
+              defaultValue={filters.search}
+              maxLength={SEARCH_MAX}
+              className={inputClass}
+            />
+          </FilterField>
+        </div>
         <FilterField label="From" htmlFor="from">
           <input
             id="from"
