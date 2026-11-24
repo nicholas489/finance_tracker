@@ -28,18 +28,66 @@ const columns = sql`
 
 // Every query is scoped to the user, so nobody can read or change another
 // user's transactions by guessing an id.
-export async function listTransactions(userId: number, filters: TransactionFilters) {
+// The WHERE clause for one user's transactions matching the filters. Shared by
+// the list and its summary so the two always count the same rows.
+function filterWhere(userId: number, filters: TransactionFilters) {
   const pattern = filters.search ? `%${escapeLike(filters.search)}%` : "";
+  return sql`
+    WHERE user_id = ${userId}
+      ${filters.type ? sql`AND type = ${filters.type}` : sql``}
+      ${filters.category ? sql`AND category = ${filters.category}` : sql``}
+      ${filters.from ? sql`AND date >= ${filters.from}` : sql``}
+      ${filters.to ? sql`AND date <= ${filters.to}` : sql``}
+      ${pattern ? sql`AND (name ILIKE ${pattern} ESCAPE '\\' OR description ILIKE ${pattern} ESCAPE '\\')` : sql``}
+  `;
+}
+
+// One page of the matching transactions, newest first. id breaks ties between
+// same-day rows so every row lands on exactly one page.
+export async function listTransactions(
+  userId: number,
+  filters: TransactionFilters,
+  page: { limit: number; offset: number },
+) {
   return sql<Transaction[]>`
     SELECT ${columns} FROM transactions
-     WHERE user_id = ${userId}
-       ${filters.type ? sql`AND type = ${filters.type}` : sql``}
-       ${filters.category ? sql`AND category = ${filters.category}` : sql``}
-       ${filters.from ? sql`AND date >= ${filters.from}` : sql``}
-       ${filters.to ? sql`AND date <= ${filters.to}` : sql``}
-       ${pattern ? sql`AND (name ILIKE ${pattern} ESCAPE '\\' OR description ILIKE ${pattern} ESCAPE '\\')` : sql``}
+     ${filterWhere(userId, filters)}
      ORDER BY date DESC, id DESC
+     LIMIT ${page.limit} OFFSET ${page.offset}
   `;
+}
+
+export type TransactionSummary = {
+  count: number;
+  income: string;
+  expenses: string;
+  byCategory: { category: string; expenses: string }[];
+};
+
+// Totals across every matching transaction, not just the page being shown.
+// Summed in the database and returned as text so cents are never rounded
+// through a float.
+export async function getTransactionSummary(
+  userId: number,
+  filters: TransactionFilters,
+): Promise<TransactionSummary> {
+  const where = filterWhere(userId, filters);
+  const [[totals], byCategory] = await Promise.all([
+    sql<Omit<TransactionSummary, "byCategory">[]>`
+      SELECT count(*)::int AS count,
+             COALESCE(SUM(amount) FILTER (WHERE type = 'income'), 0)::text AS income,
+             COALESCE(SUM(amount) FILTER (WHERE type = 'expense'), 0)::text AS expenses
+        FROM transactions
+        ${where}
+    `,
+    sql<TransactionSummary["byCategory"]>`
+      SELECT category, SUM(amount)::text AS expenses
+        FROM transactions
+        ${where} AND type = 'expense'
+       GROUP BY category
+    `,
+  ]);
+  return { ...totals, byCategory };
 }
 
 export type MonthTotals = { income: string; expenses: string };

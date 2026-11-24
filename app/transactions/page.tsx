@@ -11,7 +11,11 @@ import { requireUser } from "@/lib/dal";
 import { formatDate, formatMoney, toCents } from "@/lib/format";
 import { postDueRecurring } from "@/lib/recurring";
 import { isTransactionType, isValidDate } from "@/lib/transaction-form";
-import { listTransactions, type TransactionFilters } from "@/lib/transactions";
+import {
+  getTransactionSummary,
+  listTransactions,
+  type TransactionFilters,
+} from "@/lib/transactions";
 import { listExpenseCategories } from "@/lib/user-categories";
 import { DeleteButton } from "./delete-button";
 import { SpendingChart } from "./spending-chart";
@@ -25,6 +29,27 @@ const primaryButtonClass = `${buttonClass} bg-foreground text-background hover:b
 const secondaryButtonClass = `${buttonClass} border border-black/[.12] hover:bg-black/[.04] dark:border-white/[.18] dark:hover:bg-white/[.06]`;
 
 const SEARCH_MAX = 100;
+const PAGE_SIZE = 20;
+
+// A whole number of 1 or more, else the first page.
+function parsePage(value: string | string[] | undefined) {
+  const page = typeof value === "string" && /^\d+$/.test(value) ? Number(value) : 1;
+  return page >= 1 ? page : 1;
+}
+
+// A link to another page that keeps the current filters. Only the filters are
+// carried over, so a one-off budget alert doesn't follow the user around.
+function pageHref(filters: TransactionFilters, page: number) {
+  const params = new URLSearchParams();
+  if (filters.search) params.set("q", filters.search);
+  if (filters.from) params.set("from", filters.from);
+  if (filters.to) params.set("to", filters.to);
+  if (filters.type) params.set("type", filters.type);
+  if (filters.category) params.set("category", filters.category);
+  if (page > 1) params.set("page", String(page));
+  const query = params.toString();
+  return query ? `/transactions?${query}` : "/transactions";
+}
 
 // The URL can hold anything, so invalid filters are ignored rather than trusted.
 function parseFilters(
@@ -61,7 +86,16 @@ export default async function TransactionsPage(props: PageProps<"/transactions">
     filters.from && filters.to && filters.from > filters.to
       ? `"From" (${formatDate(filters.from)}) is after "To" (${formatDate(filters.to)}). Choose a From date on or before the To date.`
       : undefined;
-  const transactions = rangeError ? [] : await listTransactions(user.id, filters);
+  const summary = rangeError ? null : await getTransactionSummary(user.id, filters);
+  const count = summary?.count ?? 0;
+  const totalPages = Math.max(1, Math.ceil(count / PAGE_SIZE));
+  // A page past the end (an old link, or the last row on it was deleted)
+  // shows the last page rather than an empty list.
+  const page = Math.min(parsePage(params.page), totalPages);
+  const offset = (page - 1) * PAGE_SIZE;
+  const transactions = summary
+    ? await listTransactions(user.id, filters, { limit: PAGE_SIZE, offset })
+    : [];
   // Set after saving an expense that left its budget at 80% or more. The
   // alert is worked out from the budget itself, never from the URL.
   const alertMonth = typeof params.month === "string" ? parseMonth(params.month) : undefined;
@@ -71,19 +105,13 @@ export default async function TransactionsPage(props: PageProps<"/transactions">
       : null;
   const isFiltered = Object.values(filters).some(Boolean);
 
-  let incomeCents = 0;
-  let expenseCents = 0;
-  // Expenses per category, so the chart follows the filters like the totals do.
-  const categoryCents = new Map<string, number>();
-  for (const t of transactions) {
-    if (t.type === "income") {
-      incomeCents += toCents(t.amount);
-    } else {
-      expenseCents += toCents(t.amount);
-      const category = t.category ?? "";
-      categoryCents.set(category, (categoryCents.get(category) ?? 0) + toCents(t.amount));
-    }
-  }
+  // Totals and the chart cover every matching transaction, not just this page.
+  const incomeCents = summary ? toCents(summary.income) : 0;
+  const expenseCents = summary ? toCents(summary.expenses) : 0;
+  const spending = (summary?.byCategory ?? []).map((c) => ({
+    category: c.category,
+    cents: toCents(c.expenses),
+  }));
 
   return (
     <>
@@ -202,12 +230,10 @@ export default async function TransactionsPage(props: PageProps<"/transactions">
       </dl>
 
       {expenseCents > 0 && (
-        <SpendingChart
-          spending={Array.from(categoryCents, ([category, cents]) => ({ category, cents }))}
-        />
+        <SpendingChart spending={spending} />
       )}
 
-      {transactions.length === 0 ? (
+      {count === 0 ? (
         <p className="mt-6 rounded-2xl border border-dashed border-black/[.12] px-6 py-12 text-center text-sm text-zinc-600 dark:border-white/[.18] dark:text-zinc-400">
           {rangeError
             ? "No transactions to show: the From date is after the To date."
@@ -259,7 +285,38 @@ export default async function TransactionsPage(props: PageProps<"/transactions">
           ))}
         </ul>
       )}
+
+      {totalPages > 1 && (
+        <nav
+          aria-label="Pagination"
+          className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm"
+        >
+          <p className="text-zinc-600 dark:text-zinc-400">
+            Showing {offset + 1}–{offset + transactions.length} of {count}
+          </p>
+          <div className="flex items-center gap-2">
+            <PageLink href={page > 1 ? pageHref(filters, page - 1) : null}>Previous</PageLink>
+            <span aria-current="page" className="px-2 tabular-nums">
+              Page {page} of {totalPages}
+            </span>
+            <PageLink href={page < totalPages ? pageHref(filters, page + 1) : null}>Next</PageLink>
+          </div>
+        </nav>
+      )}
     </>
+  );
+}
+
+// A Previous/Next link, shown greyed out (and not clickable) at either end.
+function PageLink({ href, children }: { href: string | null; children: React.ReactNode }) {
+  return href ? (
+    <Link href={href} className={secondaryButtonClass}>
+      {children}
+    </Link>
+  ) : (
+    <span aria-disabled="true" className={`${secondaryButtonClass} pointer-events-none opacity-50`}>
+      {children}
+    </span>
   );
 }
 
